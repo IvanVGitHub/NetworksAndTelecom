@@ -1,0 +1,283 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using System.Windows.Forms;
+using System.IO;
+
+
+namespace Сервер
+{
+    public partial class Сервер : Form
+    {
+        //Слушающий сокет
+        TcpListener _server;
+        //Массив для клиентов
+        TcpClient[] clients;
+        //Счётчик клиентов
+        int _clientCount;
+        //Ограничение игроков
+        int MaxClients;
+        // Флаг мягкой остановки циклов и дополнительных потоков
+        bool _stopNetwork;
+        //Последнее слово
+        string lastWord = null;
+
+        static List<string> cities;
+        string[] CityNames;
+        //Обновить количество игроков
+        public void UpdateClientsDisplay()
+        {
+            ИгрокиОнлайн.Text = _clientCount.ToString();
+        }
+        // Делегат доступа к элементу формы listBox1 из вспомогательного потока.
+        protected delegate void UpdateClientsDisplayDelegate();
+
+        // Получение сообщений от клиентов
+        public void UpdateReceiveDisplay(int clientnum, string message)
+        {
+            listBox1.Items.Add("№" + clientnum.ToString() + ": " + message);
+        }
+        // Делегат доступа к элементу формы listBox1 из вспомогательного потока.
+        protected delegate void UpdateReceiveDisplayDelegate(int clientcount, string message);
+
+        public Сервер()
+        {
+            InitializeComponent();
+
+            this.BackColor = Color.FromArgb(255, 55, 55);
+
+            Остановить.Enabled = false;
+
+            List<string> cities = new List<string>();
+            CityNames = File.ReadAllLines("1.txt");
+        }
+
+        private void Запуск_Click(object sender, EventArgs e)
+        {
+            КоличествоИгроков.Enabled = false;
+            Запуск.Enabled = false;
+            Порт.Enabled = false;
+            Остановить.Enabled = true;
+
+            clients = new TcpClient[int.Parse(КоличествоИгроков.Value.ToString())];
+            MaxClients = int.Parse(КоличествоИгроков.Value.ToString());
+
+            StartServer();
+        }
+
+        private void Остановить_Click(object sender, EventArgs e)
+        {
+            КоличествоИгроков.Enabled = true;
+            Запуск.Enabled = true;
+            Порт.Enabled = true;
+
+            StopServer();
+        }
+
+        // Запуск сервера и вспомогательного потока акцептирования клиентских подключений
+        // т.е. назначения сокетов ответственных за обмен сообщениями 
+        // с соответствующим клиентским приложением
+        void StartServer()
+        {
+            // Предотвратим повторный запуск сервера
+            if (_server == null)
+            {
+                // Блок перехвата исключений на случай запуска одновременно
+                // двух серверных приложений с одинаковым портом.
+                try
+                {
+                    _stopNetwork = false;
+                    _clientCount = 0;
+
+                    _server = new TcpListener(IPAddress.Any, int.Parse(Порт.Text));
+                    _server.Start();
+
+
+                    Thread acceptThread = new Thread(AcceptClients);
+                    acceptThread.Start();
+
+                    // Визуальное оповещение, что сервер запущен
+                    this.BackColor = Color.FromArgb(55, 155, 55);
+                }
+                catch
+                {
+                    MessageBox.Show("Порт занят");
+                }
+            }
+        }
+
+        //Остановка сервера 
+        void StopServer()
+        {
+            if (_server != null)
+            {
+                _server.Stop();
+                _server = null;
+                _stopNetwork = true;
+
+                for (int i = 0; i < MaxClients; i++)
+                {
+                    if (clients[i] != null) clients[i].Close();
+                }
+                // Визуально оповещаем, что сервер остановлен.
+                this.BackColor = Color.FromArgb(255, 55, 55);
+            }
+        }
+
+        // Принимаем запросы клиентов на подключение и
+        // привязываем к каждому подключившемуся клиенту 
+        // сокет (в данном случае объект класса TcpClient)
+        // для обменом сообщений.
+        void AcceptClients()
+        {
+            while (true)
+            {
+                try
+                {
+                    this.clients[_clientCount] = _server.AcceptTcpClient();
+                    Thread readThread = new Thread(ReceiveRun);
+                    readThread.Start(_clientCount);
+                    _clientCount++;
+                    Invoke(new UpdateClientsDisplayDelegate(UpdateClientsDisplay));
+                }
+                catch
+                {
+                    // Перехватим возможные исключения
+                    //ErrorSound();
+                }
+
+
+                if (_clientCount == MaxClients || _stopNetwork == true)
+                {
+                    break;
+                }
+
+            }
+        }
+
+        // Асинхронная отправка сообщения клиенту.
+        public void AsyncSendCompleted(IAsyncResult ar)
+        {
+            NetworkStream ns = (NetworkStream)ar.AsyncState;
+            ns.EndWrite(ar);
+        }
+        
+        /// Отправка сообщений клиентам
+        /// text текст сообщения
+        /// skipindex индекс клиента которому не посылается сообщение
+        void SendToClients(string text)
+        {
+            for (int i = 0; i < MaxClients; i++)
+            {
+                if (clients[i] != null)
+                {
+                    // Подготовка и запуск асинхронной отправки сообщения.
+                    NetworkStream ns = clients[i].GetStream();
+                    byte[] myReadBuffer = Encoding.Default.GetBytes(text);
+                    ns.BeginWrite(myReadBuffer, 0, myReadBuffer.Length,
+                                                                 new AsyncCallback(AsyncSendCompleted), ns);
+                }
+            }
+        }
+        
+        // Извлечение сообщения от клиента и ретрансляция полученного 
+        // сообщения другим клиентам
+        void ReceiveRun(object num)
+        {
+            while (true)
+            {
+                try
+                {
+                    string s = null;
+                    NetworkStream ns = clients[(int)num].GetStream();
+
+                    // Раскомментировав строчку ниже, тем самым уменьшив размер приемного буфера, можно убедиться,
+                    // что прием данных будет все равно осуществляться полностью.
+                    //clients[(int)num].ReceiveBufferSize = 2;
+                    while (ns.DataAvailable == true)
+                    {
+                        // Определить точный размер буфера приема позволяет свойство класса TcpClient - Available
+                        byte[] buffer = new byte[clients[(int)num].Available];
+
+                        ns.Read(buffer, 0, buffer.Length);
+                        s += Encoding.Default.GetString(buffer);
+                        if (s.Contains("Leave"))
+                        {
+                            clients[(int)num] = null;
+                            _clientCount--;
+                            Invoke(new UpdateClientsDisplayDelegate(UpdateClientsDisplay));
+                        }
+                    }
+
+
+                    if (!checkAnswer(s))
+                    {
+                        SendToClients("№" + ((int)num).ToString() + " Lose");
+                        clients[(int)num] = null;
+                        _clientCount--;
+                        Invoke(new UpdateClientsDisplayDelegate(UpdateClientsDisplay));
+                        break;
+                    }
+
+                    else
+                    {
+                        if (s != null)
+                        {
+
+                            // Данный метод, хотя и вызывается в отдельном потоке (не в главном),
+                            // но находит родительский поток и выполняет делегат указанный в качестве параметра 
+                            // в главном потоке, безопасно обновляя интерфейс формы.
+                            Invoke(new UpdateReceiveDisplayDelegate(UpdateReceiveDisplay), new object[] { (int)num, s });
+                            try
+                            {
+                                lastWord = s;
+                            }catch(Exception e)
+                            {
+                                MessageBox.Show(e.ToString());
+                            }
+                            // Принятое сообщение от клиента перенаправляем всем клиентам
+                            s = "№" + ((int)num).ToString() + ": " + s;
+                            SendToClients(s);
+                            s = String.Empty;
+                        }
+                    }
+                    
+                    Thread.Sleep(100);
+                }
+                catch
+                {
+                    // Перехватим возможные исключения
+                    //ErrorSound();
+                }
+
+
+                if (_stopNetwork == true) break;
+
+            }
+        }
+
+        
+        bool checkAnswer(string message)
+        {
+            if (CityNames.Contains(message) || listBox1.Items.Count == 0)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
+        }
+    }
+}

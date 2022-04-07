@@ -1,0 +1,9 @@
+c:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\bin\Debug\Сервер.exe.config
+c:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\bin\Debug\Сервер.exe
+c:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\bin\Debug\Сервер.pdb
+c:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\obj\Debug\Сервер.Сервер.resources
+c:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\obj\Debug\Сервер.Properties.Resources.resources
+c:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\obj\Debug\Сервер.csproj.GenerateResource.Cache
+c:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\obj\Debug\Сервер.exe
+c:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\obj\Debug\Сервер.pdb
+C:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Сервер\obj\Debug\Сервер.csprojResolveAssemblyReference.cache

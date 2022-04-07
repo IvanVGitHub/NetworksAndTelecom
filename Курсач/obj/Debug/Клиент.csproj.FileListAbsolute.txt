@@ -1,0 +1,9 @@
+c:\users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\bin\Debug\Курсач.exe.config
+c:\users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\bin\Debug\Курсач.exe
+c:\users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\bin\Debug\Курсач.pdb
+c:\users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\obj\Debug\Курсач.Клиент.resources
+c:\users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\obj\Debug\Курсач.Properties.Resources.resources
+c:\users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\obj\Debug\Клиент.csproj.GenerateResource.Cache
+c:\users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\obj\Debug\Курсач.exe
+c:\users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\obj\Debug\Курсач.pdb
+C:\Users\matilda\documents\visual studio 2015\Projects\Курсач\Курсач\obj\Debug\Клиент.csprojResolveAssemblyReference.cache
